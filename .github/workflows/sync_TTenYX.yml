@@ -38,5 +38,5 @@ jobs:
           fi
           rsync -av --delete "$source_dir/." "../main/TTenYX/"
           cd ../main || { echo "Failed to enter '../main' directory"; exit 1; }
-          git commit -am 'Action: Sync TTenYX's blueprints'
+          git commit -am "Action: Sync TTenYX's blueprints"
           git push origin main
