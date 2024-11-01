@@ -1,0 +1,42 @@
+name: Sync TTenYX's blueprints
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sync repo
+        uses: actions/checkout@v4
+        with:
+          repository: DSPBluePrints/FactoryBluePrints
+          token: ${{secrets.ACTION_WORKFLOW}}
+          path: sync
+          sparse-checkout: |
+            合集__全流程 Folder_All_in_one
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+          
+      - name: Setup git
+        uses: actions4git/setup-git@v1
+
+      - name: Sync folder to part branch
+        run: |
+          cd sync || { echo "Failed to enter 'sync' directory"; exit 1; }
+          source_dir=$(find . -maxdepth 2 -type d -wholename "./合集__全流程 Folder_All_in_one/【TTenYX】 全流程蓝图包 v*")
+          if [ ! -d "$source_dir" ]; then
+              echo "Error: Source directory '$source_dir' does not exist."
+              exit 1
+          fi
+          rsync -av --delete "$source_dir/." "../main/TTenYX/"
+          cd ../main || { echo "Failed to enter '../main' directory"; exit 1; }
+          git commit -am 'Action: Sync TTenYX's blueprints'
+          git push origin main
