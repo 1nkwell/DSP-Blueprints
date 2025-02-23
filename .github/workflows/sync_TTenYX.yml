@@ -2,7 +2,7 @@ name: Sync TTenYX's blueprints
 
 on:
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -10,8 +10,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 步骤1：检出当前仓库的 main 分支
+      - name: Checkout main branch
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: main
+          path: main
+
+      # 步骤2：缓存源仓库的最新 SHA（用于持久化存储）
+      - name: Cache source repo SHA
+        id: cache-sha
+        uses: actions/cache@v3.4.2
+        with:
+          path: main/.github/last_sha.txt # 存储 SHA 的文件路径
+          key: source-repo-sha
+
+      # 步骤3：检查源仓库是否有新提交
+      - name: Check source repo updates
+        id: check-update
+        run: |
+          cd main
+          # 获取源仓库最新 commit SHA
+          LATEST_SHA=$(git ls-remote https://github.com/DSPBluePrints/FactoryBluePrints.git HEAD | awk '{print $1}')
+
+          # 读取缓存中的 SHA
+          if [ -f ".github/last_sha.txt" ]; then
+            CACHED_SHA=$(cat .github/last_sha.txt)
+          else
+            CACHED_SHA=""
+          fi
+
+          # 比较 SHA 是否变化
+          if [ "$LATEST_SHA" != "$CACHED_SHA" ]; then
+            echo "检测到更新，继续执行同步..."
+            echo "$LATEST_SHA" > .github/last_sha.txt
+            echo "UPDATE_DETECTED=true" >> $GITHUB_ENV
+          else
+            echo "无新更新，跳过后续步骤"
+            echo "UPDATE_DETECTED=false" >> $GITHUB_ENV
+          fi
+          cd ..
+
+      # 步骤4：检出源仓库内容（仅在检测到更新时运行）
       - name: Checkout sync repo
-        uses: actions/checkout@v4
+        if: env.UPDATE_DETECTED == 'true'
+        uses: actions/checkout@v4.2.2
         with:
           repository: DSPBluePrints/FactoryBluePrints
           token: ${{secrets.ACTION_WORKFLOW}}
@@ -19,25 +62,29 @@ jobs:
           sparse-checkout: |
             合集__全流程 Folder_All_in_one
 
-      - name: Checkout main branch
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: main
-          
+      # 步骤5：配置 Git（仅在检测到更新时运行）
       - name: Setup git
-        uses: actions4git/setup-git@v1
+        if: env.UPDATE_DETECTED == 'true'
+        uses: actions4git/setup-git@v1.0.3
 
+      # 步骤6：同步文件并提交（仅在检测到更新时运行）
       - name: Sync folder to part branch
+        if: env.UPDATE_DETECTED == 'true'
         run: |
           cd sync || { echo "Failed to enter 'sync' directory"; exit 1; }
-          source_dir=$(find . -maxdepth 2 -type d -wholename "./合集__全流程 Folder_All_in_one/【TTenYX】 全流程蓝图包 v*")
+          source_dir=$(find . -maxdepth 2 -type d -wholename "./合集__全流程 Folder_All_in_one/【TTenYX】 全流程蓝图包 v*" | tail -n1)
           if [ ! -d "$source_dir" ]; then
               echo "Error: Source directory '$source_dir' does not exist."
               exit 1
           fi
           rsync -av --delete "$source_dir/." "../main/TTenYX/"
           cd ../main || { echo "Failed to enter '../main' directory"; exit 1; }
-          git add './TTenYX'
-          git commit -m "Action: Sync TTenYX's blueprints"
-          git push origin main
+
+          # 检查是否有实际变更再提交
+          if git diff --quiet --exit-code; then
+            echo "无文件变动，跳过提交"
+          else
+            git add './TTenYX'
+            git commit -m "Action: Sync TTenYX's blueprints"
+            git push origin main
+          fi
