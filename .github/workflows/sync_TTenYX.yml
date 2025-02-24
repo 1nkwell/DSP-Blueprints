@@ -72,7 +72,7 @@ jobs:
         if: env.UPDATE_DETECTED == 'true'
         run: |
           cd sync || { echo "Failed to enter 'sync' directory"; exit 1; }
-          source_dir=$(find . -maxdepth 2 -type d -wholename "./合集__全流程 Folder_All_in_one/【TTenYX】 全流程蓝图包 v*" | tail -n1)
+          source_dir=$(find . -maxdepth 2 -type d -wholename "./合集__全流程 Folder_All_in_one/【TTenYX】 全流程蓝图包 v*" | sort -k 4 -n | tail -n1)
           if [ ! -d "$source_dir" ]; then
               echo "Error: Source directory '$source_dir' does not exist."
               exit 1
