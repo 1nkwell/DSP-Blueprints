@@ -17,23 +17,13 @@ jobs:
           ref: main
           path: main
 
-      # 步骤2：缓存源仓库的最新 SHA（用于持久化存储）
-      - name: Cache source repo SHA
-        id: cache-sha
-        uses: actions/cache@v3.4.2
-        with:
-          path: main/.github/last_sha.txt # 存储 SHA 的文件路径
-          key: source-repo-sha
-
-      # 步骤3：检查源仓库是否有新提交
+      # 步骤2：检查源仓库是否有新提交
       - name: Check source repo updates
         id: check-update
         run: |
           cd main
-          # 获取源仓库最新 commit SHA
           LATEST_SHA=$(git ls-remote https://github.com/DSPBluePrints/FactoryBluePrints.git HEAD | awk '{print $1}')
 
-          # 读取缓存中的 SHA
           if [ -f ".github/last_sha.txt" ]; then
             CACHED_SHA=$(cat .github/last_sha.txt)
           else
@@ -42,6 +32,8 @@ jobs:
 
           # 比较 SHA 是否变化
           if [ "$LATEST_SHA" != "$CACHED_SHA" ]; then
+            echo "LATEST_SHA=$LATEST_SHA"
+            echo "CACHED_SHA=$CACHED_SHA"
             echo "检测到更新，继续执行同步..."
             echo "$LATEST_SHA" > .github/last_sha.txt
             echo "UPDATE_DETECTED=true" >> $GITHUB_ENV
@@ -72,7 +64,7 @@ jobs:
         if: env.UPDATE_DETECTED == 'true'
         run: |
           cd sync || { echo "Failed to enter 'sync' directory"; exit 1; }
-          source_dir=$(find . -maxdepth 2 -type d -name "*[TTenYX]*" | sort -V | tail -n1)
+          source_dir=$(find . -maxdepth 2 -type d -name "*\[TTenYX\]*" | sort -V | tail -n1)
           if [ ! -d "$source_dir" ]; then
               echo "Error: TTenYX directory does not exist."
               exit 1
@@ -84,7 +76,7 @@ jobs:
           if git diff --quiet --exit-code; then
             echo "无文件变动，跳过提交"
           else
-            git add './TTenYX'
+            git add './TTenYX' '.github/last_sha.txt'
             git commit -m "Action: Sync TTenYX's blueprints"
             git push origin main
           fi
