@@ -65,27 +65,27 @@ jobs:
         run: |
           cd sync || { echo "Failed to enter 'sync' directory" >&2; exit 1; }
           if [[ -z $(find . -maxdepth 2 -type d -name "*TTenYX*" -print -quit) ]]; then
-              echo "错误: 未找到包含'TTenYX'的目录." >&2
-              exit 1
+            echo "错误: 未找到包含'TTenYX'的目录." >&2
+            exit 1
           fi
           find . -maxdepth 2 -type d -name "*TTenYX*" | while read -r source_dir; do
-              if [[ ! -d "$source_dir" ]] || [[ ! -r "$source_dir" ]]; then
-                  echo "错误: 无法访问源目录: $source_dir" >&2
-                  continue
-              fi
+            if [[ ! -d "$source_dir" ]] || [[ ! -r "$source_dir" ]]; then
+              echo "错误: 无法访问源目录: $source_dir" >&2
+              continue
+            fi
 
-              dir_name=$(basename "$source_dir")
-              target_dir="../main/$dir_name"
-              
-              echo "同步: $source_dir -> $target_dir"
+            dir_name=$(basename "$source_dir")
+            target_dir="../main/TTenYX/$dir_name"
+            
+            echo "同步: $source_dir -> $target_dir"
 
-              if rsync -av --delete "$source_dir/" "$target_dir/"; then
-                  echo "✓ 成功: $dir_name"
-              else
-                  echo "✗ 失败: $dir_name" >&2
-              fi
+            if rsync -av --delete "$source_dir/" "$target_dir/"; then
+              echo "✓ 成功: $dir_name"
+            else
+              echo "✗ 失败: $dir_name" >&2
+            fi
 
-              echo "---"
+            echo "---"
           done
           cd ../main || { echo "Failed to enter '../main' directory" >&2; exit 1; }
 
