@@ -63,14 +63,31 @@ jobs:
       - name: Sync folder to part branch
         if: env.UPDATE_DETECTED == 'true'
         run: |
-          cd sync || { echo "Failed to enter 'sync' directory"; exit 1; }
-          source_dir=$(find . -maxdepth 2 -type d -name "*\[TTenYX\]*" | sort -V | tail -n1)
-          if [ ! -d "$source_dir" ]; then
-              echo "Error: TTenYX directory does not exist."
+          cd sync || { echo "Failed to enter 'sync' directory" >&2; exit 1; }
+          if [[ -z $(find . -maxdepth 2 -type d -name "*TTenYX*" -print -quit) ]]; then
+              echo "错误: 未找到包含'TTenYX'的目录." >&2
               exit 1
           fi
-          rsync -av --delete "$source_dir/." "../main/TTenYX/"
-          cd ../main || { echo "Failed to enter '../main' directory"; exit 1; }
+          find . -maxdepth 2 -type d -name "*TTenYX*" | while read -r source_dir; do
+              if [[ ! -d "$source_dir" ]] || [[ ! -r "$source_dir" ]]; then
+                  echo "错误: 无法访问源目录: $source_dir" >&2
+                  continue
+              fi
+
+              dir_name=$(basename "$source_dir")
+              target_dir="../main/$dir_name"
+              
+              echo "同步: $source_dir -> $target_dir"
+
+              if rsync -av --delete "$source_dir/" "$target_dir/"; then
+                  echo "✓ 成功: $dir_name"
+              else
+                  echo "✗ 失败: $dir_name" >&2
+              fi
+
+              echo "---"
+          done
+          cd ../main || { echo "Failed to enter '../main' directory" >&2; exit 1; }
 
           # 检查是否有实际变更再提交
           if git diff --quiet --exit-code; then
