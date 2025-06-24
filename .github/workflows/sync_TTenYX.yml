@@ -63,6 +63,7 @@ jobs:
       - name: Sync folder to part branch
         if: env.UPDATE_DETECTED == 'true'
         run: |
+          export LANG=en_US.UTF-8
           cd sync || { echo "Failed to enter 'sync' directory" >&2; exit 1; }
           if [[ -z $(find . -maxdepth 2 -type d -name "*TTenYX*" -print -quit) ]]; then
             echo "错误: 未找到包含'TTenYX'的目录." >&2
@@ -79,7 +80,7 @@ jobs:
             
             echo "同步: $source_dir -> $target_dir"
 
-            if rsync -av --delete "$source_dir/" "$target_dir/"; then
+            if mkdir -p "../main/TTenYX" && rsync -av --iconv=utf-8,utf-8 --delete "$source_dir/" "$target_dir/"; then
               echo "✓ 成功: $dir_name"
             else
               echo "✗ 失败: $dir_name" >&2
